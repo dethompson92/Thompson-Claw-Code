@@ -27,6 +27,8 @@ pub struct RegisteredTmuxSession {
     pub keywords: Vec<String>,
     pub stale_minutes: u64,
     pub format: Option<MessageFormat>,
+    #[serde(default)]
+    pub active_wrapper_monitor: bool,
 }
 
 impl From<&TmuxSessionMonitor> for RegisteredTmuxSession {
@@ -38,6 +40,7 @@ impl From<&TmuxSessionMonitor> for RegisteredTmuxSession {
             keywords: value.keywords.clone(),
             stale_minutes: value.stale_minutes,
             format: value.format.clone(),
+            active_wrapper_monitor: false,
         }
     }
 }
@@ -345,6 +348,9 @@ async fn poll_tmux(
     let mut sessions_to_unregister = Vec::new();
 
     for (session_name, registration) in sessions {
+        if registration.active_wrapper_monitor {
+            continue;
+        }
         match session_exists(&session_name).await {
             Ok(false) => {
                 sessions_to_unregister.push(session_name.clone());
@@ -970,6 +976,36 @@ mod tests {
             events
                 .iter()
                 .any(|e| e.canonical_kind() == "github.issue-closed")
+        );
+    }
+
+    #[tokio::test]
+    async fn github_client_includes_bearer_auth_when_token_configured() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let mut buf = vec![0_u8; 4096];
+            let n = stream.read(&mut buf).await.unwrap();
+            let req = String::from_utf8_lossy(&buf[..n]).to_string();
+            stream
+                .write_all(b"HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: 2\r\n\r\n[]")
+                .await
+                .unwrap();
+            req
+        });
+
+        let client = build_github_client(Some("secret-token".into())).unwrap();
+        let _ = client
+            .get(format!("http://{}/repos/x/y/pulls", addr))
+            .send()
+            .await
+            .unwrap();
+        let req = server.await.unwrap();
+        assert!(
+            req.contains("Authorization: Bearer secret-token")
+                || req.contains("authorization: Bearer secret-token")
         );
     }
 

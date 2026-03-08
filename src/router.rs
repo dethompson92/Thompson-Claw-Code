@@ -33,6 +33,9 @@ impl Router {
             .clone()
             .or_else(|| route.and_then(|route| route.format.clone()))
             .unwrap_or_else(|| self.config.defaults.format.clone());
+        let allow_dynamic_tokens = route
+            .map(|route| route.allow_dynamic_tokens)
+            .unwrap_or(false);
         let content = if let Some(template) = event
             .template
             .as_deref()
@@ -41,13 +44,16 @@ impl Router {
             dynamic_tokens::render_template(
                 template,
                 &event.template_context(),
-                route
-                    .map(|route| route.allow_dynamic_tokens)
-                    .unwrap_or(false),
+                allow_dynamic_tokens,
             )
             .await
         } else {
-            event.render_default(&format)?
+            let rendered = event.render_default(&format)?;
+            if allow_dynamic_tokens {
+                dynamic_tokens::render_template(&rendered, &event.template_context(), true).await
+            } else {
+                rendered
+            }
         };
         let content = match route.and_then(|route| route.mention.as_deref()) {
             Some(mention) if !mention.trim().is_empty() => {
@@ -232,6 +238,30 @@ mod tests {
         let (_, _, tmux_content) = router.preview(&tmux_event).await.unwrap();
         assert!(tmux_content.starts_with("<@botid> "));
         assert!(tmux_content.contains("failed"));
+    }
+
+    #[tokio::test]
+    async fn default_rendered_content_expands_dynamic_tokens_when_route_opted_in() {
+        let config = AppConfig {
+            defaults: DefaultsConfig {
+                channel: Some("default".into()),
+                format: MessageFormat::Compact,
+            },
+            routes: vec![RouteRule {
+                event: "custom".into(),
+                filter: Default::default(),
+                channel: Some("route".into()),
+                mention: None,
+                allow_dynamic_tokens: true,
+                format: Some(MessageFormat::Compact),
+                template: None,
+            }],
+            ..AppConfig::default()
+        };
+        let router = Router::new(Arc::new(config));
+        let event = IncomingEvent::custom(None, "hostname={sh:printf hi}".into());
+        let (_, _, content) = router.preview(&event).await.unwrap();
+        assert_eq!(content, "hostname=hi");
     }
 
     #[tokio::test]
