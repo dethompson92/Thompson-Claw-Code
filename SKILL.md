@@ -31,3 +31,31 @@ Key sections:
 ```text
 [CLI clients / webhooks / daemon monitors] -> [clawhip daemon :25294] -> [route filters] -> [Discord REST API]
 ```
+
+## Dynamic templates
+
+Routes can opt into special dynamic tokens with `allow_dynamic_tokens = true`.
+
+Examples:
+
+```toml
+[[routes]]
+event = "tmux.*"
+channel = "1468539002985644084"
+allow_dynamic_tokens = true
+template = "{session}\n{tmux_tail:issue-1456:20}\n{iso_time}"
+```
+
+Supported dynamic tokens:
+- `{sh:...}`
+- `{tmux_tail:session:lines}`
+- `{file_tail:/path/to/file:lines}`
+- `{env:NAME}`
+- `{now}`
+- `{iso_time}`
+
+Safety:
+- route-level opt-in only
+- allowlisted token kinds only
+- short timeout
+- output capped

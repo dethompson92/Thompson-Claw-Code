@@ -277,6 +277,71 @@ channel = "1468539002985644084"
 
 Filter values support glob matching.
 
+## Dynamic template tokens
+
+Route templates can use special tokens, but only when the route explicitly opts in:
+
+```toml
+[[routes]]
+event = "tmux.*"
+filter = { session = "issue-*" }
+channel = "1468539002985644084"
+format = "alert"
+allow_dynamic_tokens = true
+template = "{session} {keyword}\n{tmux_tail:issue-1456:20}\n{iso_time}"
+```
+
+Supported dynamic tokens:
+
+- `{sh:git rev-parse --short HEAD}`
+- `{tmux_tail:issue-1456:20}`
+- `{file_tail:/tmp/clawhip.log:30}`
+- `{env:HOSTNAME}`
+- `{now}`
+- `{iso_time}`
+
+Existing payload-field tokens still work as before:
+
+- `{repo}`
+- `{number}`
+- `{title}`
+- `{session}`
+- `{keyword}`
+
+### Safety model
+
+Dynamic tokens are **safe by default**:
+
+- only the built-in allowlist of token kinds is supported
+- routes must opt in with `allow_dynamic_tokens = true`
+- command/file/tmux token resolution uses a short timeout
+- output is length-capped
+- normal compact/alert behavior is unchanged when no template is used
+
+### Example ops templates
+
+```toml
+[[routes]]
+event = "git.commit"
+filter = { repo = "clawhip" }
+channel = "1468539002985644084"
+allow_dynamic_tokens = true
+template = "{repo} {sh:git -C /home/user/Workspace/clawhip rev-parse --short HEAD} on {env:HOSTNAME}"
+
+[[routes]]
+event = "tmux.*"
+filter = { session = "issue-*" }
+channel = "1468539002985644084"
+allow_dynamic_tokens = true
+template = "{session}: {line}\n--- tail ---\n{tmux_tail:issue-1456:20}"
+
+[[routes]]
+event = "custom"
+channel = "1468539002985644084"
+allow_dynamic_tokens = true
+template = "{message}\n\nrecent log:\n{file_tail:/tmp/clawhip.log:30}"
+```
+
 ## Config commands
 
 ```bash
