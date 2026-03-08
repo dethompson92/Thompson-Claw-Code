@@ -3,6 +3,7 @@ mod client;
 mod config;
 mod daemon;
 mod discord;
+mod dynamic_tokens;
 mod events;
 mod monitor;
 mod router;

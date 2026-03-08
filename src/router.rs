@@ -3,7 +3,8 @@ use std::sync::Arc;
 use crate::Result;
 use crate::config::{AppConfig, RouteRule};
 use crate::discord::DiscordClient;
-use crate::events::{IncomingEvent, MessageFormat, render_template};
+use crate::dynamic_tokens;
+use crate::events::{IncomingEvent, MessageFormat};
 
 pub struct Router {
     config: Arc<AppConfig>,
@@ -15,11 +16,11 @@ impl Router {
     }
 
     pub async fn dispatch(&self, event: &IncomingEvent, discord: &DiscordClient) -> Result<()> {
-        let (channel, _format, content) = self.preview(event)?;
+        let (channel, _format, content) = self.preview(event).await?;
         discord.send_message(&channel, &content).await
     }
 
-    pub fn preview(&self, event: &IncomingEvent) -> Result<(String, MessageFormat, String)> {
+    pub async fn preview(&self, event: &IncomingEvent) -> Result<(String, MessageFormat, String)> {
         let route = self.route_for(event);
         let channel = event
             .channel
@@ -37,7 +38,14 @@ impl Router {
             .as_deref()
             .or_else(|| route.and_then(|route| route.template.as_deref()))
         {
-            render_template(template, &event.template_context())
+            dynamic_tokens::render_template(
+                template,
+                &event.template_context(),
+                route
+                    .map(|route| route.allow_dynamic_tokens)
+                    .unwrap_or(false),
+            )
+            .await
         } else {
             event.render_default(&format)?
         };
@@ -109,8 +117,8 @@ mod tests {
     use super::*;
     use crate::config::{DefaultsConfig, RouteRule};
 
-    #[test]
-    fn preview_uses_filtered_route_overrides() {
+    #[tokio::test]
+    async fn preview_uses_filtered_route_overrides() {
         let config = AppConfig {
             defaults: DefaultsConfig {
                 channel: Some("default".into()),
@@ -123,6 +131,7 @@ mod tests {
                     .collect(),
                 channel: Some("route".into()),
                 mention: None,
+                allow_dynamic_tokens: false,
                 format: Some(MessageFormat::Alert),
                 template: None,
             }],
@@ -132,7 +141,7 @@ mod tests {
         let event =
             IncomingEvent::tmux_keyword("issue-1440".into(), "error".into(), "boom".into(), None);
 
-        let (channel, format, content) = router.preview(&event).unwrap();
+        let (channel, format, content) = router.preview(&event).await.unwrap();
         assert_eq!(channel, "route");
         assert_eq!(format, MessageFormat::Alert);
         assert_eq!(
@@ -141,8 +150,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn route_level_mention_is_prepended_for_custom() {
+    #[tokio::test]
+    async fn route_level_mention_is_prepended_for_custom() {
         let config = AppConfig {
             defaults: DefaultsConfig {
                 channel: Some("default".into()),
@@ -153,6 +162,7 @@ mod tests {
                 filter: Default::default(),
                 channel: Some("route".into()),
                 mention: Some("<@1465264645320474637>".into()),
+                allow_dynamic_tokens: false,
                 format: Some(MessageFormat::Compact),
                 template: None,
             }],
@@ -160,13 +170,13 @@ mod tests {
         };
         let router = Router::new(Arc::new(config));
         let event = IncomingEvent::custom(None, "wake up".into());
-        let (channel, _, content) = router.preview(&event).unwrap();
+        let (channel, _, content) = router.preview(&event).await.unwrap();
         assert_eq!(channel, "route");
         assert_eq!(content, "<@1465264645320474637> wake up");
     }
 
-    #[test]
-    fn route_level_mention_is_prepended_for_github_and_tmux() {
+    #[tokio::test]
+    async fn route_level_mention_is_prepended_for_github_and_tmux() {
         let config = AppConfig {
             defaults: DefaultsConfig {
                 channel: Some("default".into()),
@@ -180,6 +190,7 @@ mod tests {
                         .collect(),
                     channel: Some("gh-route".into()),
                     mention: Some("<@botid>".into()),
+                    allow_dynamic_tokens: false,
                     format: Some(MessageFormat::Alert),
                     template: None,
                 },
@@ -190,6 +201,7 @@ mod tests {
                         .collect(),
                     channel: Some("tmux-route".into()),
                     mention: Some("<@botid>".into()),
+                    allow_dynamic_tokens: false,
                     format: Some(MessageFormat::Alert),
                     template: None,
                 },
@@ -200,19 +212,99 @@ mod tests {
 
         let github_event =
             IncomingEvent::github_issue_opened("clawhip".into(), 5, "boom".into(), None);
-        let (_, _, github_content) = router.preview(&github_event).unwrap();
+        let (_, _, github_content) = router.preview(&github_event).await.unwrap();
         assert!(github_content.starts_with("<@botid> "));
         assert!(github_content.contains("boom"));
 
         let tmux_event =
             IncomingEvent::tmux_keyword("issue-1440".into(), "error".into(), "failed".into(), None);
-        let (_, _, tmux_content) = router.preview(&tmux_event).unwrap();
+        let (_, _, tmux_content) = router.preview(&tmux_event).await.unwrap();
         assert!(tmux_content.starts_with("<@botid> "));
         assert!(tmux_content.contains("failed"));
     }
 
-    #[test]
-    fn filter_can_route_same_event_type_by_repo() {
+    #[tokio::test]
+    async fn dynamic_tokens_expand_only_when_enabled() {
+        let config = AppConfig {
+            defaults: DefaultsConfig {
+                channel: Some("default".into()),
+                format: MessageFormat::Compact,
+            },
+            routes: vec![RouteRule {
+                event: "github.*".into(),
+                filter: [("repo".to_string(), "clawhip".to_string())]
+                    .into_iter()
+                    .collect(),
+                channel: Some("literal-route".into()),
+                mention: None,
+                allow_dynamic_tokens: false,
+                format: Some(MessageFormat::Compact),
+                template: Some("repo={repo} cmd={sh:printf hi}".into()),
+            }],
+            ..AppConfig::default()
+        };
+        let router = Router::new(Arc::new(config));
+        let event = IncomingEvent::github_issue_opened("clawhip".into(), 1, "test".into(), None);
+        let (_, _, content) = router.preview(&event).await.unwrap();
+        assert_eq!(content, "repo=clawhip cmd={sh:printf hi}");
+
+        let config = AppConfig {
+            defaults: DefaultsConfig {
+                channel: Some("default".into()),
+                format: MessageFormat::Compact,
+            },
+            routes: vec![RouteRule {
+                event: "github.*".into(),
+                filter: [("repo".to_string(), "clawhip".to_string())]
+                    .into_iter()
+                    .collect(),
+                channel: Some("dynamic-route".into()),
+                mention: None,
+                allow_dynamic_tokens: true,
+                format: Some(MessageFormat::Compact),
+                template: Some("repo={repo} cmd={sh:printf hi}".into()),
+            }],
+            ..AppConfig::default()
+        };
+        let router = Router::new(Arc::new(config));
+        let (_, _, content) = router.preview(&event).await.unwrap();
+        assert_eq!(content, "repo=clawhip cmd=hi");
+    }
+
+    #[tokio::test]
+    async fn dynamic_now_and_file_tail_tokens_expand() {
+        let file = tempfile::NamedTempFile::new().unwrap();
+        std::fs::write(file.path(), "one\ntwo\nthree\n").unwrap();
+        let template = format!(
+            "tail={{file_tail:{}:2}} now={{now}} iso={{iso_time}}",
+            file.path().display()
+        );
+        let config = AppConfig {
+            defaults: DefaultsConfig {
+                channel: Some("default".into()),
+                format: MessageFormat::Compact,
+            },
+            routes: vec![RouteRule {
+                event: "custom".into(),
+                filter: Default::default(),
+                channel: Some("dynamic-route".into()),
+                mention: None,
+                allow_dynamic_tokens: true,
+                format: Some(MessageFormat::Compact),
+                template: Some(template),
+            }],
+            ..AppConfig::default()
+        };
+        let router = Router::new(Arc::new(config));
+        let event = IncomingEvent::custom(None, "ignored".into());
+        let (_, _, content) = router.preview(&event).await.unwrap();
+        assert!(content.contains("two\nthree") || content.contains("two\r\nthree"));
+        assert!(content.contains("now="));
+        assert!(content.contains("iso="));
+    }
+
+    #[tokio::test]
+    async fn filter_can_route_same_event_type_by_repo() {
         let config = AppConfig {
             defaults: DefaultsConfig {
                 channel: Some("default".into()),
@@ -226,6 +318,7 @@ mod tests {
                         .collect(),
                     channel: Some("repo-a".into()),
                     mention: None,
+                    allow_dynamic_tokens: false,
                     format: None,
                     template: None,
                 },
@@ -236,6 +329,7 @@ mod tests {
                         .collect(),
                     channel: Some("repo-b".into()),
                     mention: None,
+                    allow_dynamic_tokens: false,
                     format: None,
                     template: None,
                 },
@@ -244,7 +338,7 @@ mod tests {
         };
         let router = Router::new(Arc::new(config));
         let event = IncomingEvent::github_issue_opened("clawhip".into(), 7, "bug".into(), None);
-        let (channel, _, _) = router.preview(&event).unwrap();
+        let (channel, _, _) = router.preview(&event).await.unwrap();
         assert_eq!(channel, "repo-b");
     }
 }

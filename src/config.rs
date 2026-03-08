@@ -71,6 +71,8 @@ pub struct RouteRule {
     pub filter: BTreeMap<String, String>,
     pub channel: Option<String>,
     pub mention: Option<String>,
+    #[serde(default)]
+    pub allow_dynamic_tokens: bool,
     pub format: Option<MessageFormat>,
     pub template: Option<String>,
 }

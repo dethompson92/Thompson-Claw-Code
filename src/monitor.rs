@@ -410,7 +410,7 @@ async fn dispatch_event(
     event: &IncomingEvent,
     mention: Option<&str>,
 ) -> Result<()> {
-    let (channel, _format, content) = router.preview(event)?;
+    let (channel, _format, content) = router.preview(event).await?;
     let content = match mention {
         Some(mention) if !mention.trim().is_empty() => format!("{} {}", mention.trim(), content),
         _ => content,
