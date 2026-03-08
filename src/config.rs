@@ -70,6 +70,7 @@ pub struct RouteRule {
     #[serde(default)]
     pub filter: BTreeMap<String, String>,
     pub channel: Option<String>,
+    pub mention: Option<String>,
     pub format: Option<MessageFormat>,
     pub template: Option<String>,
 }

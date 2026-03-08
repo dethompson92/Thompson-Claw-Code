@@ -41,6 +41,12 @@ impl Router {
         } else {
             event.render_default(&format)?
         };
+        let content = match route.and_then(|route| route.mention.as_deref()) {
+            Some(mention) if !mention.trim().is_empty() => {
+                format!("{} {}", mention.trim(), content)
+            }
+            _ => content,
+        };
         Ok((channel, format, content))
     }
 
@@ -116,6 +122,7 @@ mod tests {
                     .into_iter()
                     .collect(),
                 channel: Some("route".into()),
+                mention: None,
                 format: Some(MessageFormat::Alert),
                 template: None,
             }],
@@ -135,6 +142,76 @@ mod tests {
     }
 
     #[test]
+    fn route_level_mention_is_prepended_for_custom() {
+        let config = AppConfig {
+            defaults: DefaultsConfig {
+                channel: Some("default".into()),
+                format: MessageFormat::Compact,
+            },
+            routes: vec![RouteRule {
+                event: "custom".into(),
+                filter: Default::default(),
+                channel: Some("route".into()),
+                mention: Some("<@1465264645320474637>".into()),
+                format: Some(MessageFormat::Compact),
+                template: None,
+            }],
+            ..AppConfig::default()
+        };
+        let router = Router::new(Arc::new(config));
+        let event = IncomingEvent::custom(None, "wake up".into());
+        let (channel, _, content) = router.preview(&event).unwrap();
+        assert_eq!(channel, "route");
+        assert_eq!(content, "<@1465264645320474637> wake up");
+    }
+
+    #[test]
+    fn route_level_mention_is_prepended_for_github_and_tmux() {
+        let config = AppConfig {
+            defaults: DefaultsConfig {
+                channel: Some("default".into()),
+                format: MessageFormat::Compact,
+            },
+            routes: vec![
+                RouteRule {
+                    event: "github.*".into(),
+                    filter: [("repo".to_string(), "clawhip".to_string())]
+                        .into_iter()
+                        .collect(),
+                    channel: Some("gh-route".into()),
+                    mention: Some("<@botid>".into()),
+                    format: Some(MessageFormat::Alert),
+                    template: None,
+                },
+                RouteRule {
+                    event: "tmux.*".into(),
+                    filter: [("session".to_string(), "issue-*".to_string())]
+                        .into_iter()
+                        .collect(),
+                    channel: Some("tmux-route".into()),
+                    mention: Some("<@botid>".into()),
+                    format: Some(MessageFormat::Alert),
+                    template: None,
+                },
+            ],
+            ..AppConfig::default()
+        };
+        let router = Router::new(Arc::new(config));
+
+        let github_event =
+            IncomingEvent::github_issue_opened("clawhip".into(), 5, "boom".into(), None);
+        let (_, _, github_content) = router.preview(&github_event).unwrap();
+        assert!(github_content.starts_with("<@botid> "));
+        assert!(github_content.contains("boom"));
+
+        let tmux_event =
+            IncomingEvent::tmux_keyword("issue-1440".into(), "error".into(), "failed".into(), None);
+        let (_, _, tmux_content) = router.preview(&tmux_event).unwrap();
+        assert!(tmux_content.starts_with("<@botid> "));
+        assert!(tmux_content.contains("failed"));
+    }
+
+    #[test]
     fn filter_can_route_same_event_type_by_repo() {
         let config = AppConfig {
             defaults: DefaultsConfig {
@@ -148,6 +225,7 @@ mod tests {
                         .into_iter()
                         .collect(),
                     channel: Some("repo-a".into()),
+                    mention: None,
                     format: None,
                     template: None,
                 },
@@ -157,6 +235,7 @@ mod tests {
                         .into_iter()
                         .collect(),
                     channel: Some("repo-b".into()),
+                    mention: None,
                     format: None,
                     template: None,
                 },
