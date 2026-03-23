@@ -1303,6 +1303,16 @@ World`);
                 const match = result.find((r) => r.type === 'security-review');
                 expect(match).toBeDefined();
             });
+            it('should NOT detect "코드리뷰어 추천해줘" as code-review (reviewer false positive)', () => {
+                const result = detectKeywordsWithType('코드리뷰어 추천해줘');
+                const match = result.find((r) => r.type === 'code-review');
+                expect(match).toBeUndefined();
+            });
+            it('should NOT detect "보안리뷰어가 필요해" as security-review (reviewer false positive)', () => {
+                const result = detectKeywordsWithType('보안리뷰어가 필요해');
+                const match = result.find((r) => r.type === 'security-review');
+                expect(match).toBeUndefined();
+            });
             it('should detect "울트라씽크" as ultrathink', () => {
                 const result = detectKeywordsWithType('울트라씽크');
                 const match = result.find((r) => r.type === 'ultrathink');

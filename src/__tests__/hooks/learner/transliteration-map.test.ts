@@ -70,8 +70,9 @@ describe("expandTriggers", () => {
       expect(result).toContain("configure notifications");
       expect(result).toContain("딥다이브");
       expect(result).toContain("딥 다이브");
-      expect(result).toContain("알림 설정");
-      expect(result).toContain("노티 설정");
+      // configure-notifications entries removed (too generic, false-positive risk)
+      expect(result).not.toContain("알림 설정");
+      expect(result).not.toContain("노티 설정");
     });
 
     it('expands "trace and interview" and "investigate deeply" correctly', () => {
@@ -117,64 +118,9 @@ describe("expandTriggers", () => {
   });
 
   // ---------------------------------------------------------------------------
-  // Section 4: configure-notifications triggers
-  // ---------------------------------------------------------------------------
-  describe("configure-notifications triggers", () => {
-    it('expands "configure notifications"', () => {
-      const result = expandTriggers(["configure notifications"]);
-      expect(result).toContain("알림 설정");
-      expect(result).toContain("노티 설정");
-    });
-
-    it('expands "setup notifications"', () => {
-      const result = expandTriggers(["setup notifications"]);
-      expect(result).toContain("알림 설정");
-    });
-
-    it('expands "configure telegram"', () => {
-      const result = expandTriggers(["configure telegram"]);
-      expect(result).toContain("텔레그램 설정");
-    });
-
-    it('expands "telegram bot"', () => {
-      const result = expandTriggers(["telegram bot"]);
-      expect(result).toContain("텔레그램 봇");
-    });
-
-    it('expands "configure discord"', () => {
-      const result = expandTriggers(["configure discord"]);
-      expect(result).toContain("디스코드 설정");
-    });
-
-    it('expands "discord webhook"', () => {
-      const result = expandTriggers(["discord webhook"]);
-      expect(result).toContain("디스코드 웹훅");
-    });
-
-    it('expands "configure slack"', () => {
-      const result = expandTriggers(["configure slack"]);
-      expect(result).toContain("슬랙 설정");
-    });
-
-    it('expands "slack webhook"', () => {
-      const result = expandTriggers(["slack webhook"]);
-      expect(result).toContain("슬랙 웹훅");
-    });
-  });
-
-  // ---------------------------------------------------------------------------
   // Section 5: Deduplication
   // ---------------------------------------------------------------------------
   describe("deduplication", () => {
-    it('deduplicates "알림 설정" when both "configure notifications" and "setup notifications" are given', () => {
-      const result = expandTriggers([
-        "configure notifications",
-        "setup notifications",
-      ]);
-      const count = result.filter((t) => t === "알림 설정").length;
-      expect(count).toBe(1);
-    });
-
     it('deduplicates "딥다이브" when both "deep dive" and "deep-dive" are given', () => {
       const result = expandTriggers(["deep dive", "deep-dive"]);
       const count = result.filter((t) => t === "딥다이브").length;
@@ -196,7 +142,7 @@ describe("expandTriggers", () => {
     });
 
     it("always preserves all original triggers in output", () => {
-      const inputs = ["deep dive", "configure notifications", "unknown-xyz"];
+      const inputs = ["deep dive", "deep-pipeline", "unknown-xyz"];
       const result = expandTriggers(inputs);
       for (const trigger of inputs) {
         expect(result).toContain(trigger);
@@ -208,7 +154,7 @@ describe("expandTriggers", () => {
         [],
         ["deep dive"],
         ["unknown"],
-        ["deep dive", "configure notifications"],
+        ["deep dive", "deep-pipeline"],
         ["ralph", "cancel"],
       ];
       for (const input of cases) {
@@ -252,10 +198,10 @@ describe("expandTriggers", () => {
         "trace and interview",
         "investigate deeply",
         "deep-pipeline",
-        "configure notifications",
-        "setup notifications",
-        "telegram bot",
-        "slack webhook",
+        "deep-pipe",
+        "pipeline-cycle",
+        "dev-pipeline",
+        "dev-cycle",
         "unknown-trigger",
       ];
 

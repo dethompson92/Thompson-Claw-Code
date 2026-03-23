@@ -5,7 +5,8 @@
  * Used at cache-load time to expand triggersLower arrays so that
  * promptLower.includes(triggerLower) matches Korean user input.
  *
- * SCOPE: Only skills with explicit `triggers:` in YAML frontmatter.
+ * SCOPE: Only skills with explicit `triggers:` in YAML frontmatter,
+ * limited to phrases specific enough to avoid false positives.
  * Built-in skills (autopilot, ralph, etc.) are handled by keyword-detector
  * regex patterns, NOT by this map.
  *
@@ -27,19 +28,6 @@ const KOREAN_MAP: Record<string, string[]> = {
   "pipeline-cycle": ["파이프라인 사이클"],
   "dev-pipeline": ["개발 파이프라인"],
   "dev-cycle": ["개발 사이클"],
-
-  // === configure-notifications skill ===
-  "configure notifications": ["알림 설정", "노티 설정"],
-  "setup notifications": ["알림 설정"],
-  "configure telegram": ["텔레그램 설정"],
-  "setup telegram": ["텔레그램 설정"],
-  "telegram bot": ["텔레그램 봇"],
-  "configure discord": ["디스코드 설정"],
-  "setup discord": ["디스코드 설정"],
-  "discord webhook": ["디스코드 웹훅"],
-  "configure slack": ["슬랙 설정"],
-  "setup slack": ["슬랙 설정"],
-  "slack webhook": ["슬랙 웹훅"],
 };
 
 /**
