@@ -336,6 +336,7 @@ export const stateWriteTool: ToolDefinition<{
 }> = {
   name: 'state_write',
   description: 'Write/update state for a specific mode. Creates the state file and directories if they do not exist. Common fields (active, iteration, phase, etc.) can be set directly as parameters. Additional custom fields can be passed via the optional `state` parameter. Note: swarm uses SQLite and cannot be written via this tool.',
+  annotations: { readOnlyHint: false, destructiveHint: false },
   schema: {
     mode: z.enum(STATE_TOOL_MODES).describe('The mode to write state for'),
     active: z.boolean().optional().describe('Whether the mode is currently active'),

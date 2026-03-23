@@ -105,32 +105,34 @@ Legacy compatibility list (removed only under `--force`/`--all`):
 
 ## Critical: Deferred Tool Handling
 
-The state management tools (`state_clear`, `state_list_active`, `state_get_status`) may be
-registered as **deferred tools** by Claude Code. Before calling any state tool, you MUST
-first load it via `ToolSearch`:
+The state management tools (`state_clear`, `state_read`, `state_write`, `state_list_active`,
+`state_get_status`) may be registered as **deferred tools** by Claude Code. Before calling
+any state tool, you MUST first load all of them via `ToolSearch`:
 
 ```
-ToolSearch(query="select:mcp__plugin_oh-my-claudecode_t__state_clear,mcp__plugin_oh-my-claudecode_t__state_list_active,mcp__plugin_oh-my-claudecode_t__state_get_status")
+ToolSearch(query="select:mcp__plugin_oh-my-claudecode_t__state_clear,mcp__plugin_oh-my-claudecode_t__state_read,mcp__plugin_oh-my-claudecode_t__state_write,mcp__plugin_oh-my-claudecode_t__state_list_active,mcp__plugin_oh-my-claudecode_t__state_get_status")
 ```
 
 If `state_clear` is unavailable or fails, use this **bash fallback** to directly remove
-state files for the current session:
+state files for the target mode. Replace `MODE` with the specific mode being cancelled
+(e.g. `ralplan`, `ralph`, `ultrawork`). Do NOT use wildcards — other modes may need to
+preserve their state (e.g. autopilot preserves resume data).
 
 ```bash
 # Fallback: direct file removal when state_clear MCP tool is unavailable
 SESSION_ID="${CLAUDE_SESSION_ID:-}"
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || { d="$PWD"; while [ "$d" != "/" ] && [ ! -d "$d/.omc" ]; do d="$(dirname "$d")"; done; echo "$d"; })"
 OMC_STATE="$REPO_ROOT/.omc/state"
+MODE="ralplan"  # <-- replace with the target mode
 
-# Clear session-scoped state
+# Clear session-scoped state for the specific mode
 if [ -n "$SESSION_ID" ] && [ -d "$OMC_STATE/sessions/$SESSION_ID" ]; then
-  rm -f "$OMC_STATE/sessions/$SESSION_ID"/*-state.json
-  rm -f "$OMC_STATE/sessions/$SESSION_ID"/*-stop-breaker.json
+  rm -f "$OMC_STATE/sessions/$SESSION_ID/${MODE}-state.json"
+  rm -f "$OMC_STATE/sessions/$SESSION_ID/${MODE}-stop-breaker.json"
 fi
 
 # Clear legacy state for the target mode
-# Replace MODE with: ralplan, ralph, ultrawork, autopilot, etc.
-rm -f "$OMC_STATE/MODE-state.json"
+rm -f "$OMC_STATE/${MODE}-state.json"
 ```
 
 ## Implementation Steps
