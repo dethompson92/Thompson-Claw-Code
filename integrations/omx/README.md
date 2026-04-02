@@ -2,6 +2,10 @@
 
 This directory ships a clawhip-side OMX integration that forwards native OMX hook envelopes to the clawhip daemon without making OMX users hand-roll generic `IncomingEvent` HTTP payloads.
 
+## Recommended default setup
+
+For new clawhip + OMX installs, this bridge is the default/recommended integration path: install the hook assets from this directory, let the SDK forward the frozen v1 envelope, and prefer `clawhip omx hook` when the CLI is available, falling back to `/api/omx/hook` over HTTP when needed. Use generic event-payload translation or legacy local wrapper emits only when you need compatibility with older setups.
+
 ## What is included
 
 - `clawhip-sdk.mjs` — small OMX-facing client that hides clawhip discovery + transport details

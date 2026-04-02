@@ -12,6 +12,7 @@
 ### Upgrade notes
 
 - crate version is now `0.5.1`
+- native OMX hook-bridge + SDK setup (`integrations/omx/`, `clawhip omx hook`, `/api/omx/hook`) is the default/recommended integration path
 - no config migration is required for this patch release
 
 ## 0.3.0 - 2026-03-09

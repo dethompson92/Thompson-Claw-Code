@@ -63,7 +63,8 @@ clawhip tmux list
 ```
 
 See [`skills/omx/`](skills/omx/) for ready-to-use scripts.
-Native OMC/OMX routing now prefers the normalized [`session.*` contract](docs/native-event-contract.md); legacy `agent.*` wrapper emits remain supported for compatibility.
+Recommended default clawhip + OMX setup: install the native bridge from [`integrations/omx/`](integrations/omx/) and forward the frozen hook envelope via `clawhip omx hook` when the CLI is available, with `POST /api/omx/hook` as the daemon fallback.
+Native OMC/OMX routing now prefers the normalized [`session.*` contract](docs/native-event-contract.md); legacy `agent.*` wrapper emits remain supported for compatibility only.
 
 ### [OMC (oh-my-claudecode)](https://github.com/Yeachan-Heo/oh-my-claudecode)
 
@@ -437,7 +438,7 @@ Verification:
 
 ### 7. Native OMC / OMX session contract
 
-Canonical native routing for OMC/OMX uses `session.*` events after clawhip normalization.
+Canonical native routing for OMC/OMX uses `session.*` events after clawhip normalization. For new OMX integrations, the default/recommended path is the native bridge in [`integrations/omx/`](integrations/omx/) forwarding the frozen v1 envelope to `clawhip omx hook` or `POST /api/omx/hook`; keep `agent.*` wrapper emits only for compatibility.
 
 Accepted upstream inputs:
 - legacy wrapper emits like `agent.started` / `agent.finished` / `agent.failed`
