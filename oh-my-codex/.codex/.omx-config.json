@@ -1,0 +1,19 @@
+{
+  "env": {
+    "OMX_DEFAULT_FRONTIER_MODEL": "glm-5.1:cloud",
+    "OMX_DEFAULT_STANDARD_MODEL": "minimax-m2.7:cloud",
+    "OMX_DEFAULT_SPARK_MODEL": "qwen3-coder-next:cloud",
+    "OMX_SPARK_MODEL": "qwen3-coder-next:cloud"
+  },
+  "models": {
+    "default": "glm-5.1:cloud",
+    "team": "glm-5.1:cloud",
+    "autopilot": "glm-5.1:cloud",
+    "ralph": "glm-5.1:cloud",
+    "ralplan": "glm-5.1:cloud",
+    "plan": "glm-5.1:cloud",
+    "deep-interview": "minimax-m2.7:cloud",
+    "explore": "qwen3-coder-next:cloud",
+    "team_low_complexity": "qwen3-coder-next:cloud"
+  }
+}

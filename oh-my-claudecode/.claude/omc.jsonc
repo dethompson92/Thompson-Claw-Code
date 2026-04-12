@@ -1,0 +1,31 @@
+{
+  // Ollama Cloud profile. Claude Code should be launched with `ollama launch claude --model ...`.
+  // Force inherit keeps OMC child agents on the parent Ollama-selected model, which is safer for non-Claude providers.
+  "routing": {
+    "enabled": true,
+    "defaultTier": "MEDIUM",
+    "forceInherit": true,
+    "escalationEnabled": true,
+    "maxEscalations": 2,
+    "tierModels": {
+      "LOW": "qwen3-coder-next:cloud",
+      "MEDIUM": "kimi-k2.5:cloud",
+      "HIGH": "glm-5.1:cloud"
+    }
+  },
+  "externalModels": {
+    "defaults": {
+      "provider": "codex",
+      "codexModel": "glm-5.1:cloud",
+      "geminiModel": "gemini-3-flash-preview:cloud"
+    },
+    "fallbackPolicy": {
+      "onModelFailure": "cross_provider",
+      "allowCrossProvider": true,
+      "crossProviderOrder": ["codex", "gemini"]
+    }
+  },
+  "permissions": {
+    "maxBackgroundTasks": 3
+  }
+}

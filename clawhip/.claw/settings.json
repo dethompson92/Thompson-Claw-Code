@@ -1,0 +1,20 @@
+{
+  "$schema": "SettingsSchema",
+  "model": "minimax-m2.7:cloud",
+  "aliases": {
+    "default": "minimax-m2.7:cloud",
+    "upgrade": "glm-5.1:cloud",
+    "fallback": "qwen3-coder-next:cloud",
+    "cheap": "qwen3-coder-next:cloud",
+    "visual": "gemini-3-flash-preview:cloud",
+    "orchestrator": "kimi-k2.5:cloud"
+  },
+  "providerFallbacks": {
+    "primary": "minimax-m2.7:cloud",
+    "fallbacks": [
+      "glm-5.1:cloud",
+      "qwen3-coder-next:cloud",
+      "kimi-k2.5:cloud"
+    ]
+  }
+}

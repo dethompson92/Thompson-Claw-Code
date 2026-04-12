@@ -1,0 +1,163 @@
+{
+  // Ollama Cloud profile for this repo. Pro plans allow up to 3 concurrent cloud models.
+  "model_fallback": true,
+  "runtime_fallback": {
+    "enabled": true,
+    "retry_on_errors": [400, 429, 500, 502, 503, 504, 529],
+    "max_fallback_attempts": 4,
+    "cooldown_seconds": 30,
+    "timeout_seconds": 45,
+    "notify_on_fallback": true
+  },
+  "background_task": {
+    "defaultConcurrency": 3,
+    "providerConcurrency": {
+      "ollama": 3
+    },
+    "modelConcurrency": {
+      "ollama/glm-5.1:cloud": 1,
+      "ollama/kimi-k2.5:cloud": 2,
+      "ollama/minimax-m2.7:cloud": 3,
+      "ollama/qwen3-coder-next:cloud": 3
+    }
+  },
+  "agents": {
+    "sisyphus": {
+      "model": "ollama/kimi-k2.5:cloud",
+      "fallback_models": [
+        "ollama/glm-5.1:cloud",
+        "ollama/minimax-m2.7:cloud",
+        "ollama/qwen3-coder-next:cloud"
+      ]
+    },
+    "prometheus": {
+      "model": "ollama/kimi-k2.5:cloud",
+      "fallback_models": [
+        "ollama/glm-5.1:cloud",
+        "ollama/minimax-m2.7:cloud"
+      ]
+    },
+    "hephaestus": {
+      "model": "ollama/glm-5.1:cloud",
+      "allow_non_gpt_model": true,
+      "fallback_models": [
+        "ollama/kimi-k2.5:cloud",
+        "ollama/minimax-m2.7:cloud"
+      ]
+    },
+    "oracle": {
+      "model": "ollama/glm-5.1:cloud",
+      "fallback_models": [
+        "ollama/kimi-k2.5:cloud",
+        "ollama/gemini-3-flash-preview:cloud"
+      ]
+    },
+    "librarian": {
+      "model": "ollama/minimax-m2.7:cloud",
+      "fallback_models": [
+        "ollama/qwen3-coder-next:cloud",
+        "ollama/kimi-k2.5:cloud"
+      ]
+    },
+    "explore": {
+      "model": "ollama/qwen3-coder-next:cloud",
+      "fallback_models": [
+        "ollama/minimax-m2.7:cloud",
+        "ollama/kimi-k2.5:cloud"
+      ]
+    },
+    "multimodal-looker": {
+      "model": "ollama/gemini-3-flash-preview:cloud",
+      "fallback_models": [
+        "ollama/glm-5.1:cloud",
+        "ollama/kimi-k2.5:cloud"
+      ]
+    },
+    "atlas": {
+      "model": "ollama/kimi-k2.5:cloud",
+      "fallback_models": [
+        "ollama/minimax-m2.7:cloud",
+        "ollama/qwen3-coder-next:cloud"
+      ]
+    },
+    "metis": {
+      "model": "ollama/glm-5.1:cloud",
+      "fallback_models": [
+        "ollama/kimi-k2.5:cloud",
+        "ollama/minimax-m2.7:cloud"
+      ]
+    },
+    "momus": {
+      "model": "ollama/glm-5.1:cloud",
+      "fallback_models": [
+        "ollama/kimi-k2.5:cloud",
+        "ollama/gemini-3-flash-preview:cloud"
+      ]
+    },
+    "sisyphus-junior": {
+      "model": "ollama/minimax-m2.7:cloud",
+      "fallback_models": [
+        "ollama/qwen3-coder-next:cloud",
+        "ollama/kimi-k2.5:cloud"
+      ]
+    }
+  },
+  "categories": {
+    "ultrabrain": {
+      "model": "ollama/glm-5.1:cloud",
+      "fallback_models": [
+        "ollama/kimi-k2.5:cloud",
+        "ollama/gemini-3-flash-preview:cloud"
+      ]
+    },
+    "deep": {
+      "model": "ollama/glm-5.1:cloud",
+      "fallback_models": [
+        "ollama/kimi-k2.5:cloud",
+        "ollama/minimax-m2.7:cloud"
+      ]
+    },
+    "quick": {
+      "model": "ollama/qwen3-coder-next:cloud",
+      "fallback_models": [
+        "ollama/minimax-m2.7:cloud",
+        "ollama/kimi-k2.5:cloud"
+      ]
+    },
+    "unspecified-low": {
+      "model": "ollama/minimax-m2.7:cloud",
+      "fallback_models": [
+        "ollama/qwen3-coder-next:cloud",
+        "ollama/kimi-k2.5:cloud"
+      ]
+    },
+    "unspecified-high": {
+      "model": "ollama/kimi-k2.5:cloud",
+      "fallback_models": [
+        "ollama/glm-5.1:cloud",
+        "ollama/minimax-m2.7:cloud"
+      ]
+    },
+    "visual-engineering": {
+      "model": "ollama/gemini-3-flash-preview:cloud",
+      "fallback_models": [
+        "ollama/glm-5.1:cloud",
+        "ollama/kimi-k2.5:cloud"
+      ]
+    },
+    "artistry": {
+      "model": "ollama/gemini-3-flash-preview:cloud",
+      "fallback_models": [
+        "ollama/glm-5.1:cloud",
+        "ollama/kimi-k2.5:cloud"
+      ]
+    },
+    "writing": {
+      "model": "ollama/minimax-m2.7:cloud",
+      "fallback_models": [
+        "ollama/qwen3-coder-next:cloud",
+        "ollama/kimi-k2.5:cloud"
+      ]
+    }
+  }
+}

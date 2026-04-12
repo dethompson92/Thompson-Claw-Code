@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'USAGE'
+Usage: scripts/ollama-cloud-launch <project> [default|upgrade|fallback|cheap|visual] [-- extra args...]
+
+Projects:
+  clawhip
+  claw-code
+  oh-my-openagent
+  oh-my-codex
+  oh-my-claudecode
+
+Examples:
+  scripts/ollama-cloud-launch claw-code
+  scripts/ollama-cloud-launch oh-my-openagent upgrade
+  scripts/ollama-cloud-launch oh-my-codex default -- --help
+USAGE
+}
+
+if [[ $# -lt 1 ]]; then
+  usage
+  exit 2
+fi
+
+project="$1"
+shift
+
+tier="default"
+if [[ $# -gt 0 && "$1" != "--" ]]; then
+  tier="$1"
+  shift
+fi
+
+if [[ $# -gt 0 && "$1" == "--" ]]; then
+  shift
+fi
+
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+app=""
+repo=""
+default_model=""
+upgrade_model=""
+fallback_model=""
+cheap_model=""
+visual_model="gemini-3-flash-preview:cloud"
+
+case "$project" in
+  clawhip)
+    app="openclaw"
+    repo="$root/clawhip"
+    default_model="minimax-m2.7:cloud"
+    upgrade_model="glm-5.1:cloud"
+    fallback_model="qwen3-coder-next:cloud"
+    cheap_model="qwen3-coder-next:cloud"
+    ;;
+  claw-code|claw)
+    app="openclaw"
+    repo="$root/claw-code"
+    default_model="glm-5.1:cloud"
+    upgrade_model="glm-5.1:cloud"
+    fallback_model="qwen3-coder-next:cloud"
+    cheap_model="minimax-m2.7:cloud"
+    ;;
+  oh-my-openagent|openagent|opencode)
+    app="opencode"
+    repo="$root/oh-my-openagent"
+    default_model="kimi-k2.5:cloud"
+    upgrade_model="glm-5.1:cloud"
+    fallback_model="minimax-m2.7:cloud"
+    cheap_model="qwen3-coder-next:cloud"
+    ;;
+  oh-my-codex|omx|codex)
+    app="codex"
+    repo="$root/oh-my-codex"
+    default_model="glm-5.1:cloud"
+    upgrade_model="glm-5.1:cloud"
+    fallback_model="minimax-m2.7:cloud"
+    cheap_model="qwen3-coder-next:cloud"
+    ;;
+  oh-my-claudecode|omc|claude)
+    app="claude"
+    repo="$root/oh-my-claudecode"
+    default_model="kimi-k2.5:cloud"
+    upgrade_model="glm-5.1:cloud"
+    fallback_model="minimax-m2.7:cloud"
+    cheap_model="qwen3-coder-next:cloud"
+    ;;
+  -h|--help|help)
+    usage
+    exit 0
+    ;;
+  *)
+    echo "Unknown project: $project" >&2
+    usage >&2
+    exit 2
+    ;;
+esac
+
+case "$tier" in
+  default)
+    model="$default_model"
+    ;;
+  upgrade|smart|best)
+    model="$upgrade_model"
+    ;;
+  fallback|standard)
+    model="$fallback_model"
+    ;;
+  cheap|fast)
+    model="$cheap_model"
+    ;;
+  visual|large-context|large_context)
+    model="$visual_model"
+    ;;
+  *)
+    echo "Unknown tier: $tier" >&2
+    usage >&2
+    exit 2
+    ;;
+esac
+
+if [[ ! -d "$repo" ]]; then
+  echo "Project directory not found: $repo" >&2
+  exit 1
+fi
+
+cd "$repo"
+
+if [[ "$project" == "oh-my-codex" || "$project" == "omx" || "$project" == "codex" ]]; then
+  export CODEX_HOME="$repo/.codex"
+fi
+
+echo "Launching $app for $project with Ollama model $model" >&2
+exec ollama launch "$app" --model "$model" "$@"
