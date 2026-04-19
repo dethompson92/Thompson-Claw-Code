@@ -1,3 +1,6 @@
 target/
 .omx/
 .clawd-agents/
+.sandbox-home/
+.claw/sessions/*/
+test_scratch.rs

@@ -4469,7 +4469,9 @@ mod tests {
         assert!(help.contains("/diff"));
         assert!(help.contains("/version"));
         assert!(help.contains("/export [file]"));
-        assert!(help.contains("/session [list|switch <session-id>|fork [branch-name]]"));
+        assert!(help.contains(
+            "/session [list|switch <session-id>|fork [branch-name]|delete <session-id> [--force]]"
+        ));
         assert!(help.contains("/sandbox"));
         assert!(help.contains(
             "/plugin [list|install <path>|enable <name>|disable <name>|uninstall <id>|update <id>]"
@@ -4906,6 +4908,19 @@ mod tests {
             resolve_skill_path(&workspace, "/handoff").expect("legacy command should resolve"),
             legacy_commands.join("handoff.md")
         );
+    }
+
+    #[test]
+    fn resolve_skill_path_rejects_empty_skill_names() {
+        let workspace = temp_dir("resolve-empty-skill");
+
+        for skill in ["", "   ", "/", "$"] {
+            let error =
+                resolve_skill_path(&workspace, skill).expect_err("empty skill should fail");
+            assert_eq!(error.kind(), std::io::ErrorKind::InvalidInput);
+        }
+
+        let _ = fs::remove_dir_all(workspace);
     }
 
     #[test]

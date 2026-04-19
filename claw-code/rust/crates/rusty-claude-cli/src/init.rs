@@ -343,7 +343,8 @@ mod tests {
             .duration_since(UNIX_EPOCH)
             .expect("time should be after epoch")
             .as_nanos();
-        std::env::temp_dir().join(format!("rusty-claude-init-{nanos}"))
+        let thread_id = std::thread::current().id();
+        std::env::temp_dir().join(format!("rusty-claude-init-{nanos}-{thread_id:?}"))
     }
 
     #[test]

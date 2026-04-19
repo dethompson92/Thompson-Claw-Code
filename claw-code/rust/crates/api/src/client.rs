@@ -25,8 +25,23 @@ impl ProviderClient {
         let resolved_model = providers::resolve_model_alias(model);
         match providers::detect_provider_kind(&resolved_model) {
             ProviderKind::Anthropic => Ok(Self::Anthropic(match anthropic_auth {
+                Some(AuthSource::None) => {
+                    return Err(ApiError::missing_credentials(
+                        "Anthropic",
+                        &["ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_API_KEY"],
+                    ));
+                }
                 Some(auth) => AnthropicClient::from_auth(auth),
-                None => AnthropicClient::from_env()?,
+                None => {
+                    let auth = AuthSource::from_env_or_saved()?;
+                    if matches!(auth, AuthSource::None) {
+                        return Err(ApiError::missing_credentials(
+                            "Anthropic",
+                            &["ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_API_KEY"],
+                        ));
+                    }
+                    AnthropicClient::from_auth(auth)
+                }
             })),
             ProviderKind::Xai => Ok(Self::Xai(OpenAiCompatClient::from_env(
                 OpenAiCompatConfig::xai(),
@@ -135,6 +150,9 @@ pub fn read_xai_base_url() -> String {
 
 #[cfg(test)]
 mod tests {
+    use super::ProviderClient;
+    use crate::providers::anthropic::{AnthropicClient, AuthSource};
+    use crate::providers::openai_compat::{OpenAiCompatClient, OpenAiCompatConfig};
     use crate::providers::{detect_provider_kind, resolve_model_alias, ProviderKind};
 
     #[test]
@@ -151,5 +169,33 @@ mod tests {
             detect_provider_kind("claude-sonnet-4-6"),
             ProviderKind::Anthropic
         );
+    }
+
+    #[test]
+    fn anthropic_provider_client_rejects_explicit_missing_auth() {
+        let error = ProviderClient::from_model_with_anthropic_auth(
+            "claude-sonnet-4-6",
+            Some(AuthSource::None),
+        )
+        .expect_err("missing Anthropic credentials should fail");
+
+        assert!(error.to_string().contains("missing Anthropic credentials"));
+    }
+
+    #[test]
+    fn take_last_prompt_cache_record_returns_none_for_providers_without_records() {
+        let anthropic = ProviderClient::Anthropic(AnthropicClient::new("test-key"));
+        let xai = ProviderClient::Xai(OpenAiCompatClient::new(
+            "test-key",
+            OpenAiCompatConfig::xai(),
+        ));
+        let openai = ProviderClient::OpenAi(OpenAiCompatClient::new(
+            "test-key",
+            OpenAiCompatConfig::openai(),
+        ));
+
+        assert!(anthropic.take_last_prompt_cache_record().is_none());
+        assert!(xai.take_last_prompt_cache_record().is_none());
+        assert!(openai.take_last_prompt_cache_record().is_none());
     }
 }

@@ -49,10 +49,7 @@ impl AuthSource {
             }),
             (Some(api_key), None) => Ok(Self::ApiKey(api_key)),
             (None, Some(bearer_token)) => Ok(Self::BearerToken(bearer_token)),
-            (None, None) => Err(ApiError::missing_credentials(
-                "Anthropic",
-                &["ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_API_KEY"],
-            )),
+            (None, None) => Ok(Self::None),
         }
     }
 
@@ -487,6 +484,8 @@ impl AnthropicClient {
     }
 
     async fn preflight_message_request(&self, request: &MessageRequest) -> Result<(), ApiError> {
+        super::preflight_message_request(request)?;
+
         let Some(limit) = model_token_limit(&request.model) else {
             return Ok(());
         };
@@ -515,8 +514,14 @@ impl AnthropicClient {
             input_tokens: u32,
         }
 
-        let request_url = format!("{}/v1/messages/count_tokens", self.base_url.trim_end_matches('/'));
+        let request_url = format!(
+            "{}/v1/messages/count_tokens",
+            self.base_url.trim_end_matches('/')
+        );
         let mut request_body = self.request_profile.render_json_body(request)?;
+        if let Some(obj) = request_body.as_object_mut() {
+            obj.remove("stream");
+        }
         strip_unsupported_beta_body_fields(&mut request_body);
         let response = self
             .build_request(&request_url)
@@ -528,12 +533,7 @@ impl AnthropicClient {
         let response = expect_success(response).await?;
         let body = response.text().await.map_err(ApiError::from)?;
         let parsed = serde_json::from_str::<CountTokensResponse>(&body).map_err(|error| {
-            ApiError::json_deserialize(
-                "Anthropic count_tokens",
-                &request.model,
-                &body,
-                error,
-            )
+            ApiError::json_deserialize("Anthropic count_tokens", &request.model, &body, error)
         })?;
         Ok(parsed.input_tokens)
     }
@@ -597,7 +597,9 @@ fn jitter_for_base(base: Duration) -> Duration {
     let tick = JITTER_COUNTER.fetch_add(1, Ordering::Relaxed);
     // splitmix64 finalizer — mixes the low bits so large bases still see
     // jitter across their full range instead of being clamped to subsec nanos.
-    let mut mixed = raw_nanos.wrapping_add(tick).wrapping_add(0x9E37_79B9_7F4A_7C15);
+    let mut mixed = raw_nanos
+        .wrapping_add(tick)
+        .wrapping_add(0x9E37_79B9_7F4A_7C15);
     mixed = (mixed ^ (mixed >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
     mixed = (mixed ^ (mixed >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
     mixed ^= mixed >> 31;
@@ -679,10 +681,7 @@ where
     }
 
     let Some(token_set) = load_saved_oauth_token()? else {
-        return Err(ApiError::missing_credentials(
-            "Anthropic",
-            &["ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_API_KEY"],
-        ));
+        return Ok(AuthSource::None);
     };
     if !oauth_token_is_expired(&token_set) {
         return Ok(AuthSource::BearerToken(token_set.access_token));
@@ -1268,7 +1267,7 @@ mod tests {
             tools: None,
             tool_choice: None,
             stream: false,
-        ..Default::default()
+            ..Default::default()
         };
 
         assert!(request.with_streaming().stream);
@@ -1464,10 +1463,14 @@ mod tests {
         // temperature is kept (Anthropic supports it)
         assert_eq!(body["temperature"], serde_json::json!(0.7));
         // frequency_penalty and presence_penalty are removed
-        assert!(body.get("frequency_penalty").is_none(),
-            "frequency_penalty must be stripped for Anthropic");
-        assert!(body.get("presence_penalty").is_none(),
-            "presence_penalty must be stripped for Anthropic");
+        assert!(
+            body.get("frequency_penalty").is_none(),
+            "frequency_penalty must be stripped for Anthropic"
+        );
+        assert!(
+            body.get("presence_penalty").is_none(),
+            "presence_penalty must be stripped for Anthropic"
+        );
         // stop is renamed to stop_sequences
         assert!(body.get("stop").is_none(), "stop must be renamed");
         assert_eq!(body["stop_sequences"], serde_json::json!(["\n"]));
@@ -1484,8 +1487,10 @@ mod tests {
         super::strip_unsupported_beta_body_fields(&mut body);
 
         assert!(body.get("stop").is_none());
-        assert!(body.get("stop_sequences").is_none(),
-            "empty stop should not produce stop_sequences");
+        assert!(
+            body.get("stop_sequences").is_none(),
+            "empty stop should not produce stop_sequences"
+        );
     }
 
     #[test]
@@ -1499,7 +1504,7 @@ mod tests {
             tools: None,
             tool_choice: None,
             stream: false,
-        ..Default::default()
+            ..Default::default()
         };
 
         let mut rendered = client

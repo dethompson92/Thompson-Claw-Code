@@ -61,14 +61,11 @@ async function recoverThinkingBlockOrderFromSDK(
     return false
   }
 
-  let anySuccess = false
-  for (const messageID of orphanMessages) {
-    if (await prependThinkingPartAsync(client, sessionID, messageID)) {
-      anySuccess = true
-    }
-  }
+  const results = await Promise.all(
+    orphanMessages.map((messageID) => prependThinkingPartAsync(client, sessionID, messageID))
+  )
 
-  return anySuccess
+  return results.some(Boolean)
 }
 
 async function findMessagesWithOrphanThinkingFromSDK(

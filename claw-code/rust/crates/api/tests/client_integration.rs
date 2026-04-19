@@ -120,13 +120,14 @@ async fn send_message_blocks_oversized_requests_before_the_http_call() {
             messages: vec![InputMessage {
                 role: "user".to_string(),
                 content: vec![InputContentBlock::Text {
-                    text: "x".repeat(600_000),
+                    text: "x".repeat(1_000_000),
                 }],
             }],
             system: Some("Keep the answer short.".to_string()),
             tools: None,
             tool_choice: None,
             stream: false,
+            ..Default::default()
         })
         .await
         .expect_err("oversized request should fail local context-window preflight");
@@ -741,6 +742,7 @@ async fn live_stream_smoke_test() {
             tools: None,
             tool_choice: None,
             stream: false,
+            ..Default::default()
         })
         .await
         .expect("live stream should start");
@@ -921,5 +923,6 @@ fn sample_request(stream: bool) -> MessageRequest {
         }]),
         tool_choice: Some(ToolChoice::Auto),
         stream,
+        ..Default::default()
     }
 }
