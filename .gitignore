@@ -14,3 +14,8 @@ build/
 .env
 *.log
 .DS_Store
+conversation_archive/
+untitled folder/
+
+# Optional generated/local binaries
+claude-mem/plugin/scripts/claude-mem

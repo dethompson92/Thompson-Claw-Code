@@ -908,8 +908,10 @@ fn parse_optional_trusted_roots(root: &JsonValue) -> Result<Vec<String>, ConfigE
     let Some(object) = root.as_object() else {
         return Ok(Vec::new());
     };
-    Ok(optional_string_array(object, "trustedRoots", "merged settings.trustedRoots")?
-        .unwrap_or_default())
+    Ok(
+        optional_string_array(object, "trustedRoots", "merged settings.trustedRoots")?
+            .unwrap_or_default(),
+    )
 }
 
 fn parse_filesystem_mode_label(value: &str) -> Result<FilesystemIsolationMode, ConfigError> {
@@ -1249,14 +1251,18 @@ mod tests {
     use crate::json::JsonValue;
     use crate::sandbox::FilesystemIsolationMode;
     use std::fs;
+    use std::sync::atomic::{AtomicU64, Ordering};
     use std::time::{SystemTime, UNIX_EPOCH};
+
+    static TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 
     fn temp_dir() -> std::path::PathBuf {
         let nanos = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .expect("time should be after epoch")
             .as_nanos();
-        std::env::temp_dir().join(format!("runtime-config-{nanos}"))
+        let counter = TEMP_COUNTER.fetch_add(1, Ordering::Relaxed);
+        std::env::temp_dir().join(format!("runtime-config-{nanos}-{counter}"))
     }
 
     #[test]

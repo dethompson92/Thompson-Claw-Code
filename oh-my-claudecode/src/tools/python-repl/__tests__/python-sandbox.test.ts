@@ -176,3 +176,36 @@ describe('python-repl sandbox bridge startup integration', () => {
     }
   });
 });
+
+describe('gyoshu bridge memory fallback', () => {
+  it('falls back to resource when psutil is unavailable', () => {
+    const bridgePath = new URL('../../../../bridge/gyoshu_bridge.py', import.meta.url).pathname;
+    const tmpScript = join(tmpdir(), `omc-gyoshu-memory-${Date.now()}.py`);
+    const escapedPath = JSON.stringify(bridgePath);
+    const script = [
+      'import builtins, importlib.util, json',
+      `spec = importlib.util.spec_from_file_location("gyoshu_bridge", ${escapedPath})`,
+      'mod = importlib.util.module_from_spec(spec)',
+      'spec.loader.exec_module(mod)',
+      'original_import = builtins.__import__',
+      'def fake_import(name, *args, **kwargs):',
+      '    if name == "psutil":',
+      '        raise ImportError("psutil unavailable")',
+      '    return original_import(name, *args, **kwargs)',
+      'builtins.__import__ = fake_import',
+      'try:',
+      '    print(json.dumps(mod.get_memory_usage(), sort_keys=True))',
+      'finally:',
+      '    builtins.__import__ = original_import',
+    ].join('\n');
+    writeFileSync(tmpScript, script, 'utf-8');
+    try {
+      const result = execSync(`python3 ${tmpScript}`, { timeout: 10000 }).toString().trim();
+      const parsed = JSON.parse(result) as { rss_mb: number; vms_mb: number };
+      expect(parsed.rss_mb).toBeGreaterThanOrEqual(0);
+      expect(parsed.vms_mb).toBe(0);
+    } finally {
+      try { unlinkSync(tmpScript); } catch { /* ignore */ }
+    }
+  });
+});

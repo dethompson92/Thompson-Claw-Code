@@ -198,6 +198,12 @@ pub fn detect_provider_kind(model: &str) -> ProviderKind {
     if openai_compat::has_api_key("XAI_API_KEY") {
         return ProviderKind::Xai;
     }
+    if model.starts_with("openai/") || model.starts_with("gpt-") {
+        return ProviderKind::OpenAi;
+    }
+    if model.starts_with("grok") {
+        return ProviderKind::Xai;
+    }
     ProviderKind::Anthropic
 }
 

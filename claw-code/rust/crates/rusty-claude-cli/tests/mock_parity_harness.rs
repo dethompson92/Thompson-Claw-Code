@@ -185,13 +185,30 @@ fn clean_env_cli_reaches_mock_anthropic_service_across_scripted_parity_scenarios
     let captured = runtime.block_on(server.captured_requests());
     assert_eq!(
         captured.len(),
-        21,
-        "twelve scenarios should produce twenty-one requests"
+        42,
+        "twelve scenarios should produce forty-two requests (with token preflights)"
     );
-    assert!(captured
-        .iter()
-        .all(|request| request.path == "/v1/messages"));
-    assert!(captured.iter().all(|request| request.stream));
+    assert!(captured.iter().all(|request| {
+        request.path == "/v1/messages" || request.path == "/v1/messages/count_tokens"
+    }));
+    assert!(captured.iter().all(|request| {
+        let is_preflight = request.path == "/v1/messages/count_tokens";
+        if is_preflight {
+            assert!(
+                !request.stream,
+                "preflight count_tokens request should not be streaming: path={}, scenario={}",
+                request.path, request.scenario
+            );
+            true
+        } else {
+            assert!(
+                request.stream,
+                "actual message request should be streaming: path={}, scenario={}",
+                request.path, request.scenario
+            );
+            true
+        }
+    }));
 
     let scenarios = captured
         .iter()
@@ -201,25 +218,46 @@ fn clean_env_cli_reaches_mock_anthropic_service_across_scripted_parity_scenarios
         scenarios,
         vec![
             "streaming_text",
+            "streaming_text",
+            "read_file_roundtrip",
+            "read_file_roundtrip",
             "read_file_roundtrip",
             "read_file_roundtrip",
             "grep_chunk_assembly",
             "grep_chunk_assembly",
+            "grep_chunk_assembly",
+            "grep_chunk_assembly",
+            "write_file_allowed",
+            "write_file_allowed",
             "write_file_allowed",
             "write_file_allowed",
             "write_file_denied",
             "write_file_denied",
+            "write_file_denied",
+            "write_file_denied",
+            "multi_tool_turn_roundtrip",
+            "multi_tool_turn_roundtrip",
             "multi_tool_turn_roundtrip",
             "multi_tool_turn_roundtrip",
             "bash_stdout_roundtrip",
             "bash_stdout_roundtrip",
+            "bash_stdout_roundtrip",
+            "bash_stdout_roundtrip",
+            "bash_permission_prompt_approved",
+            "bash_permission_prompt_approved",
             "bash_permission_prompt_approved",
             "bash_permission_prompt_approved",
             "bash_permission_prompt_denied",
             "bash_permission_prompt_denied",
+            "bash_permission_prompt_denied",
+            "bash_permission_prompt_denied",
+            "plugin_tool_roundtrip",
+            "plugin_tool_roundtrip",
             "plugin_tool_roundtrip",
             "plugin_tool_roundtrip",
             "auto_compact_triggered",
+            "auto_compact_triggered",
+            "token_cost_reporting",
             "token_cost_reporting",
         ]
     );
@@ -311,6 +349,7 @@ fn run_case(case: ScenarioCase, workspace: &HarnessWorkspace, base_url: &str) ->
         .env("HOME", &workspace.home)
         .env("NO_COLOR", "1")
         .env("PATH", "/usr/bin:/bin")
+        .env("CLAW_SKIP_STDIN_CONTEXT", "1")
         .args([
             "--model",
             "sonnet",

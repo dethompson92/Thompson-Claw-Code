@@ -151,14 +151,14 @@ async fn handle_connection(
 
     requests.lock().await.push(CapturedRequest {
         method,
-        path,
+        path: path.clone(),
         headers,
         scenario: scenario.name().to_string(),
         stream: request.stream,
         raw_body,
     });
 
-    let response = build_http_response(&request, scenario);
+    let response = build_http_response(&request, scenario, &path);
     socket.write_all(response.as_bytes()).await?;
     Ok(())
 }
@@ -308,7 +308,16 @@ fn flatten_tool_result_content(content: &[api::ToolResultContentBlock]) -> Strin
 }
 
 #[allow(clippy::too_many_lines)]
-fn build_http_response(request: &MessageRequest, scenario: Scenario) -> String {
+fn build_http_response(request: &MessageRequest, scenario: Scenario, path: &str) -> String {
+    if path.ends_with("/count_tokens") {
+        return http_response(
+            "200 OK",
+            "application/json",
+            &json!({ "input_tokens": 10 }).to_string(),
+            &[("request-id", request_id_for(scenario))],
+        );
+    }
+
     let response = if request.stream {
         let body = build_stream_body(request, scenario);
         return http_response(

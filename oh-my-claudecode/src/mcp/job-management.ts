@@ -683,8 +683,7 @@ export async function handleListJobs(
 // Tool Schema Definitions (for both SDK and standalone servers)
 // ---------------------------------------------------------------------------
 
-// TODO: _provider parameter reserved for future per-provider schema customization
-export function getJobManagementToolSchemas(_provider?: 'codex' | 'gemini') {
+export function getJobManagementToolSchemas() {
   return [
     {
       name: 'wait_for_job',
